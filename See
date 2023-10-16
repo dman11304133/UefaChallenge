@@ -1,0 +1,277 @@
+import re
+import json
+from faker import Faker
+import requests
+import random
+import string
+import datetime
+from modules.CapSolver import CapSolver
+from modules.utils import get_proxy_url
+import multiprocessing
+import urllib3
+# Fake info generator
+fake = Faker()
+
+# Disable warnings from urllib3
+urllib3.disable_warnings()
+
+# Used to select random user agent
+USER_AGENTS = [
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Safari/605.1.15',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:77.0) Gecko/20100101 Firefox/77.0',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36',
+    'Mozilla / 5.0 (Macintosh; Intel Mac OS X 10_8_4) AppleWebKit / 536.30.1 (KHTML, like Gecko) Version / 6.0.5 Safari / 536.30.1',
+    'Mozilla / 5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit / 536.29.13 (KHTML, like Gecko) Version / 6.0.4 Safari / 536.29.13',
+    'Mozilla / 5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit / 534.57.2 (KHTML, like Gecko) Version / 5.1.7 Safari / 534.57.2',
+    'Mozilla / 5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit / 536.26.17 (KHTML, like Gecko) Version / 6.0.2 Safari / 536.26.17',
+    'Mozilla / 5.0 (Macintosh; U; PPC Mac OS X; en) AppleWebKit / 124 (KHTML, like Gecko) Safari / 125',
+]
+
+# Function to generate a random string
+def generate_random_string(length=12):
+    # Define the pool of characters
+    digits = string.digits
+    letters = string.ascii_letters
+    symbols = string.punctuation
+
+    # Ensure at least one character from each category
+    password = [
+        random.choice(digits),
+        random.choice(letters),
+        random.choice(symbols),
+    ]
+
+    # Fill the rest of the password with random characters
+    remaining_length = 12 - len(password)
+    all_characters = digits + letters + symbols
+    password.extend(random.choices(all_characters, k=remaining_length))
+
+    # Shuffle the password to randomize the order
+    random.shuffle(password)
+
+    # Convert the list of characters to a string
+    password_str = ''.join(password)
+
+    return password_str
+
+# Get the current date and time in UTC
+current_datetime = datetime.datetime.utcnow()
+
+# Format it as a string in the desired format
+formatted_datetime = current_datetime.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+# Function to create an account
+def create_account(proxy, env, cap_solver):
+
+    session = requests.session()
+    proxies = {
+        "https": proxy,
+    }
+    session.proxies = proxies
+
+    # Replace this URL with the registration URL of the target website
+    url = "https://idp.uefa.com/accounts.register"
+
+    # Headers to simulate human-like behavior
+    headers = {
+        "user-agent": random.choice(USER_AGENTS),
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "accept-language": "en-US,en;q=0.5",
+        "accept-encoding": "gzip, deflate, br",
+        "Authorization": "Bearer " + env.get('RAZZLE_UUID_SSO_APP'),
+        "dnt": "1",
+        "upgrade-insecure-requests": "1",
+        "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
+        "sec-fetch-site": "same-origin",
+        "sec-fetch-user": "?1",
+        "te": "trailers"
+    }
+
+    # Solve any captcha using CapSolver
+    data = cap_solver.solve_recaptcha(site_key=None, page_url=url)
+
+    # Create account with a random email and password
+    password = generate_random_string()
+    first_name = fake.first_name()
+    last_name = fake.last_name()
+    email = fake.email()
+    birthDay = str(random.randint(1, 31)).zfill(2)  # Ensure two-digit day
+    birthMonth = str(random.randint(1, 12)).zfill(2)  # Ensure two-digit month
+    birthYear = str(random.randint(1900, 2000))  # Assuming birth years between 1900 and 2000
+
+
+    payload = {
+        'email': email,
+        'password': password,
+        'regToken': 'tk1..AcbHid4Vbg.FLvKknMD1sIDn25DocNsmJTS-scfL7RdUcD5JE_VNOQ.NB5XdbcynmgRJlo7zt6d8k-H7RKfzxvN_k64NuKyBpKgVJA4_Wayl6hJ_SEPUo67KV-GU64gcnksPCE1rt0XtA.sc3',
+        'regSource': 'UEFA Ticketing Web',
+        'profile': {
+            'firstName': first_name,
+            'lastName': last_name,
+            'birthDay': birthDay,
+            'birthMonth': birthMonth,
+            'birthYear': birthYear,
+            'email': email
+        },
+        'preferences': {
+            'terms': {
+                'uefacom': {
+                    'term_1': {
+                        'isConsentGranted': True
+                    }
+                }
+            },
+            'nationalFootballAssociation': {
+                'consent_1': {
+                    'isConsentGranted': True,
+                    'entitlements': 'SMR'
+                }
+            }
+        },
+        'displayedPreferences': {
+            'terms.uefacom.term_1': {
+                'docVersion': 1,
+                'docDate': None
+            },
+            'nationalFootballAssociation.consent_1': {
+                'docVersion': 1,
+                'docDate': None
+            }
+        },
+        'data': {
+            'ticketing': {
+                'ticketsDeliveryEmail': email
+            },
+            'subscriptions': {
+                'subscribeToAll': True
+            },
+            'accounts': {
+                'acquisition': {
+                    'regSource': 'UEFA Ticketing Web',
+                    'regDate': formatted_datetime,
+                    'regCampaign': 'https://idpassets.uefa.com/saml/ticket-login.html?spName=EURO%202024%20Lottery',
+                    'regRedirectURL': 'https://idpassets.uefa.com/saml/ticket-login.html?spName=EURO%202024%20Lottery'
+                }
+            }
+        },
+        'captchaType': 'invisible',
+        'captchaToken': data.get('gRecaptchaResponse'),
+        'lang': 'en',
+        'finalizeRegistration': True,
+        'targetEnv': 'jssdk',
+        'sessionExpiration': 0,
+        'include': 'profile,data,emails,loginIDs,subscriptions,preferences',
+        'includeUserInfo': True,
+        'subscriptions': {
+            'newsletters': {
+                'UNTFNews': {
+                    'email': {
+                        'isSubscribed': True
+                    }
+                },
+                'UEFATicketing': {
+                    'email': {
+                        'isSubscribed': True
+                    }
+                },
+                'UELNews': {
+                    'email': {
+                        'isSubscribed': True
+                    }
+                },
+                'UCLNews': {
+                    'email': {
+                        'isSubscribed': True
+                    }
+                },
+                'UEFANews': {
+                    'email': {
+                        'isSubscribed': True
+                    }
+                },
+                'GamingAll': {
+                    'email': {
+                        'isSubscribed': True
+                    }
+                },
+                'UEFAWomenFootball': {
+                    'email': {
+                        'isSubscribed': True
+                    }
+                }
+            },
+            'sponsors': {
+                'all': {
+                    'email': {
+                        'isSubscribed': True
+                    }
+                }
+            }
+        },
+        'APIKey': '3_WhoQ5kSze6W6uz1oBpBfDNQkMRYi8y2RC32TGpY6XKRxlOeTTLjY-qIrnw4hJaLV',
+        'source': 'showScreenSet',
+        'sdk': 'js_latest',
+        'pageURL': 'https://idpassets.uefa.com/saml/ticket-login.html?locale=en&mode=login&samlContext=eu1_8352704_4e13e8de-4267-44bf-9839-ae3772b53bc8&spName=EURO%202024%20Lottery',
+        'sdkBuild': 15438,
+        'format': 'json'
+    }
+
+    # Make a request to submit the registration form
+    registration_response = session.post(url, json=payload, headers=headers, verify=False)
+
+    if registration_response.status_code == 200:
+        print(f"Account created: {email}:{password}")
+        with open('accounts.txt', 'a') as accounts_file:
+            accounts_file.write(f"{email}:{password}\n")
+    else:
+        print(registration_response.text)
+        print(f"Failed to create account for {email}")
+
+# Helps to get website variables
+def get_website_variables(proxy):
+    url = "https://idp.uefa.com"
+    session = requests.session()
+    proxies = {
+        "https": proxy,
+    }
+    session.proxies = proxies
+    res = session.get(url, headers={}, verify=False)
+    match = re.search(r'window\.env = ({.*?});', res.text, re.DOTALL)
+
+    if match:
+        # Extracted JSON content
+        json_content = match.group(1)
+        # Parse the JSON content into a dictionary
+        env_dict = json.loads(json_content)
+        # Print the resulting dictionary
+        return env_dict
+    else:
+        return None
+
+# Main function to initiate the account creation process
+def run_test():
+    cap_solver = CapSolver(thread_num=None)
+    proxy = get_proxy_url()
+    env = get_website_variables(proxy)
+
+    if env is not None:
+        create_account(proxy, env, cap_solver)
+    else:
+        print("Failed to pick website environment variables.")
+
+if __name__ == '__main__':
+    num_accounts = 2  # Set the desired number of accounts
+    processes = []
+
+    # Create a separate process for each account
+    for _ in range(num_accounts):
+        process = multiprocessing.Process(target=run_test)
+        processes.append(process)
+        process.start()
+
+    # Wait for all processes to finish
+    for process in processes:
+        process.join()
