@@ -7,7 +7,6 @@ class CapSolver:
         # Load the API key from the config file
         with open('config.yml', 'r') as config_file:
             config_data = yaml.safe_load(config_file)
-        
         self.apiKey = config_data.get('CAPSOLVER_API_KEY', 'DEFAULT_API_KEY')
         self.siteKey = '6LePTyoUAAAAADPttQg1At44EFCygqxZYzgleaKp'  # recaptcha sitekey found on site
         self.thread_num = thread_num

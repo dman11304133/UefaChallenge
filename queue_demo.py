@@ -32,14 +32,9 @@ def make_registration_request(session, regToken):
     BrowserAgents = [
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Safari/605.1.15',
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.0',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36',
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:77.0) Gecko/20100101 Firefox/77.0',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36',
-        'Mozilla / 5.0 (Macintosh; Intel Mac OS X 10_8_4) AppleWebKit / 536.30.1 (KHTML, like Gecko) Version / 6.0.5 Safari / 536.30.1',
-        'Mozilla / 5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit / 536.29.13 (KHTML, like Gecko) Version / 6.0.4 Safari / 536.29.13',
         'Mozilla / 5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit / 534.57.2 (KHTML, like Gecko) Version / 5.1.7 Safari / 534.57.2',
-        'Mozilla / 5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit / 536.26.17 (KHTML, like Gecko) Version / 6.0.2 Safari / 536.26.17',
-        'Mozilla / 5.0 (Macintosh; U; PPC Mac OS X; en) AppleWebKit / 124 (KHTML, like Gecko) Safari / 125',
+
     ]
 
     cookies_str = "; ".join(f"{cookie.name}={cookie.value}" for cookie in session.cookies)
@@ -178,11 +173,8 @@ def test():
 
 if __name__ == '__main__':
     #test()
-    # Set the desired number of accounts
     processes = []
-
-    # Create a separate process for each account
-    for _ in range(1):
+    for _ in range(10):
         process = multiprocessing.Process(target=test())
         processes.append(process)
         process.start()
